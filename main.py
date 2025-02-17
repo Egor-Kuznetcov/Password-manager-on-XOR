@@ -1,4 +1,5 @@
 import re
+import time
 from xor import *
 from TCATO import *
 from hashlib import sha256
@@ -15,6 +16,22 @@ def save(password):
         file.write(str(random) + "\n")
     with open("D://passwords.txt", "a") as file:
         file.write(str(password_en) + " " + str(module) + "\n")
+
+
+def read_passwords():
+    passwords = []
+    with open("C://PasswordManager/randoms.txt", "r") as file:
+        randoms = file.readlines()
+    with open("D://passwords.txt", "r") as file:
+        strings = file.readlines()
+    for i in range(len(randoms)):
+        random = list(map(int, randoms[i].replace("[", "").replace("]", "").replace("\n", "").split(", ")))
+        password, module = strings[i].split("] ")
+        password = password.replace("[", "").split(",")
+        password = list(map(int, password))
+        module = module.replace("\n", "")
+        passwords.append(decrypt(password, random_to_key(random, master_password, int(module))))
+    return passwords
 
 
 print("Welcome to Password manager on XOR!\n")
@@ -83,18 +100,7 @@ try:
                 print(str(count) + ") " + decrypt(password, random_to_key(random, master_password, int(module))))
         elif "delete " in user_choice:
             index = int(user_choice.split(" ")[1])
-            with open("C://PasswordManager/randoms.txt", "r") as file:
-                randoms = file.readlines()
-            with open("D://passwords.txt", "r") as file:
-                strings = file.readlines()
-            passwords = []
-            for i in range(len(randoms)):
-                random = list(map(int, randoms[i].replace("[", "").replace("]", "").replace("\n", "").split(", ")))
-                password, module = strings[i].split("] ")
-                password = password.replace("[", "").split(",")
-                password = list(map(int, password))
-                module = module.replace("\n", "")
-                passwords.append(decrypt(password, random_to_key(random, master_password, int(module))))
+            passwords = read_passwords()
             passwords.pop(index-1)
             file1 = open("C://PasswordManager/randoms.txt", "w")
             file2 = open("D://passwords.txt", "w")
@@ -110,18 +116,7 @@ try:
             print(f"Password {index} deleted")
         elif "edit " in user_choice:
             index = int(user_choice.split(" ")[1])
-            with open("C://PasswordManager/randoms.txt", "r") as file:
-                randoms = file.readlines()
-            with open("D://passwords.txt", "r") as file:
-                strings = file.readlines()
-            passwords = []
-            for i in range(len(randoms)):
-                random = list(map(int, randoms[i].replace("[", "").replace("]", "").replace("\n", "").split(", ")))
-                password, module = strings[i].split("] ")
-                password = password.replace("[", "").split(",")
-                password = list(map(int, password))
-                module = module.replace("\n", "")
-                passwords.append(decrypt(password, random_to_key(random, master_password, int(module))))
+            passwords = read_passwords()
             print("Enter edited password")
             passwords[index - 1] = input(">>")
             file1 = open("C://PasswordManager/randoms.txt", "w")
@@ -138,36 +133,15 @@ try:
             print(f"Password {index} edited")
         elif "select " in user_choice:
             index = int(user_choice.split(" ")[1])
-            with open("C://PasswordManager/randoms.txt", "r") as file:
-                randoms = file.readlines()
-            with open("D://passwords.txt", "r") as file:
-                strings = file.readlines()
-            passwords = []
-            for i in range(len(randoms)):
-                random = list(map(int, randoms[i].replace("[", "").replace("]", "").replace("\n", "").split(", ")))
-                password, module = strings[i].split("] ")
-                password = password.replace("[", "").split(",")
-                password = list(map(int, password))
-                module = module.replace("\n", "")
-                passwords.append(decrypt(password, random_to_key(random, master_password, int(module))))
+            passwords = read_passwords()
             selected_pass = passwords[index-1]
             print(f"Password {index} selected")
             keyboard.wait("p")
             keyboard.press_and_release("backspace")
+            time.sleep(0.007)
             two_channel_obfuscation(selected_pass)
         elif user_choice == "exit":
-            with open("C://PasswordManager/randoms.txt", "r") as file:
-                randoms = file.readlines()
-            with open("D://passwords.txt", "r") as file:
-                strings = file.readlines()
-            passwords = []
-            for i in range(len(randoms)):
-                random = list(map(int, randoms[i].replace("[", "").replace("]", "").replace("\n", "").split(", ")))
-                password, module = strings[i].split("] ")
-                password = password.replace("[", "").split(",")
-                password = list(map(int, password))
-                module = module.replace("\n", "")
-                passwords.append(decrypt(password, random_to_key(random, master_password, int(module))))
+            passwords = read_passwords()
             file1 = open("C://PasswordManager/randoms.txt", "w")
             file2 = open("D://passwords.txt", "w")
             for q in passwords:
