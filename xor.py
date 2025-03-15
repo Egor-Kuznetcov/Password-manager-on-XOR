@@ -28,7 +28,8 @@ def decrypt(text_en: list, key: list):
 
 def random_to_key(random: list, master: str, module: int):
     if len(random) > len(master):
-        master += master[:(len(random)-len(master))]
+        n = (len(random)//len(master))
+        master = master*n + master[:(len(random)-len(master)*n)]
     key = []
     for i in range(len(random)):
         key.append(random[i]*ord(master[i]) % module)
