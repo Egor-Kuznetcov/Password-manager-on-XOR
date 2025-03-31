@@ -14,6 +14,8 @@ def encrypt(text: str, key: list):
         res = []
         for i in range(len(text)):
             res.append((alph.index(text[i]) + key[i]) % len(alph))
+        del text
+        del key
         return res
 
 
@@ -23,6 +25,7 @@ def decrypt(text_en: list, key: list):
         text = ""
         for i in range(len(text_en)):
             text += alph[(text_en[i] - key[i]) % len(alph)]
+        del key
         return text
 
 
