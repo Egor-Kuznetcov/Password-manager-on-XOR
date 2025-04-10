@@ -1,10 +1,34 @@
-from os import urandom
+import serial.tools.list_ports
+
+ports = list(serial.tools.list_ports.comports())
+com = ""
+flag = False
+for port in ports:
+    if "USB-SERIAL CH340" in str(port.description):
+        com = str(port.device)
+        flag = True
+if not flag:
+    print("External device error")
+
+ser = serial.Serial(com, 9600)
+
+if b"Card Ready" not in ser.readline():
+    print("Card error")
 
 
 def gen_random(length: int):
     random = []
+    ser.write(("0 " + str(length)).encode('utf-8'))
     for _ in range(length):
-        random.append(int.from_bytes(urandom(length), byteorder='big'))
+        response = ser.readline().decode('utf-8')
+        response = [response[i:i+3] for i in range(0, len(response), 3)]
+        num = ""
+        for bit in response:
+            if bit != max(set(response), key=response.count):
+                num += '1'
+            else:
+                num += '0'
+        random.append(int(num, 2))
     return random
 
 
