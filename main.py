@@ -1,34 +1,41 @@
+import os
 import re
 from xor import *
 from TCATO import *
 from hashlib import sha256
-from os import urandom
 import keyboard
 import gc
 
 
 def save(password):
-    module = int.from_bytes(urandom(8), byteorder='big')
+    module = gen_random(1)[0] * gen_random(1)[0]
     random = gen_random(len(password))
     key = random_to_key(random, master_password, module)
     password_en = encrypt(password, key)
     with open("C://PasswordManager/randoms.txt", "a") as file:
         file.write(str(random) + "\n")
-    with open("D://passwords.txt", "a") as file:
-        file.write(str(password_en) + " " + str(module) + "\n")
+    string = str(password_en) + " " + str(module) + "\n"
+    ser.write(("1 " + string).encode('utf-8'))
+    ser.readline()
     del key
     del module
+    del string
 
 
 def read_passwords():
     passwords = []
     with open("C://PasswordManager/randoms.txt", "r") as file:
         randoms = file.readlines()
-    with open("D://passwords.txt", "r") as file:
-        strings = file.readlines()
+    ser.write(b'3')
+    string = []
+    response = b''
+    while b'-'not in response:
+        response = ser.readline()
+        if b'-' not in response:
+            string.append(response.decode('utf-8').replace("\n", "").replace("\r", ""))
     for i in range(len(randoms)):
         random = list(map(int, randoms[i].replace("[", "").replace("]", "").replace("\n", "").split(", ")))
-        password, module = strings[i].split("] ")
+        password, module = string[i].split("] ")
         password = password.replace("[", "").split(",")
         password = list(map(int, password))
         module = module.replace("\n", "")
@@ -36,6 +43,7 @@ def read_passwords():
         passwords.append(password_dec)
         del password_dec
         del module
+    del string
 
     return passwords
 
@@ -45,11 +53,9 @@ print("Welcome to Password manager on XOR!\n")
 try:
     master_password = ""
 
-    file = open("D://user.txt", "a")
-    file.close()
-    file = open("D://user.txt", "r+")
-    user = file.readline()
-    if user == "":
+    ser.write(b'4')
+    user = ser.readline().decode('utf-8').replace("\r\n", "")
+    if ('a' not in user) and ('7' not in user) and ('0' not in user):
         print("Please create a master-password")
         master_password = ""
         while True:
@@ -62,7 +68,7 @@ try:
                 break
         sha = sha256()
         sha.update(master_password.encode('utf-8'))
-        file.write(sha.hexdigest())
+        ser.write(('2 ' + str(sha.hexdigest())).encode('utf-8'))
     else:
         print("Please enter master-password")
         while True:
@@ -73,7 +79,6 @@ try:
                 print("Wrong master-password")
             else:
                 break
-    file.close()
 
     user_choice = ""
 
@@ -84,6 +89,8 @@ try:
                   "delete [index] - delete password by index\n"
                   "edit [index] - edit password by index\n"
                   "list - shows all passwords\n"
+                  "move - copies randoms.txt to external device for transfer\n"
+                  "restore - transfers data from an external device to randoms.txt\n"
                   "exit - exit from password manager\n"
                   "select [index] - select password by index\n"
                   "Press 'p' to auto-type selected password")
@@ -98,8 +105,13 @@ try:
         elif user_choice == "list":
             with open("C://PasswordManager/randoms.txt", "r") as file:
                 randoms = file.readlines()
-            with open("D://passwords.txt", "r") as file:
-                strings = file.readlines()
+            ser.write(b'3')
+            strings = []
+            response = b''
+            while b'-' not in response:
+                response = ser.readline()
+                if b'-' not in response:
+                    strings.append(response.decode('utf-8').replace("\r\n", ""))
             count = 0
             for i in range(len(randoms)):
                 count += 1
@@ -122,17 +134,18 @@ try:
                 passwords = read_passwords()
                 passwords.pop(index-1)
                 file1 = open("C://PasswordManager/randoms.txt", "w")
-                file2 = open("D://passwords.txt", "w")
+                ser.write(b'7')
+                ser.readline()
                 for q in passwords:
-                    module = int.from_bytes(urandom(4), byteorder='big')
+                    module = gen_random(1)[0] * gen_random(1)[0]
                     random = gen_random(len(q))
                     key = random_to_key(random, master_password, module)
                     password_en = encrypt(q, key)
                     file1.write(str(random) + "\n")
-                    file2.write(str(password_en) + " " + str(module) + "\n")
+                    ser.write(("1 " + str(password_en) + " " + str(module) + "\n").encode('utf-8'))
+                    ser.readline()
                     del module
                 file1.close()
-                file2.close()
                 del q
                 del passwords
                 gc.collect()
@@ -146,17 +159,18 @@ try:
                 print("Enter edited password")
                 passwords[index - 1] = input(">>")
                 file1 = open("C://PasswordManager/randoms.txt", "w")
-                file2 = open("D://passwords.txt", "w")
+                ser.write(b'7')
+                ser.readline()
                 for q in passwords:
-                    module = int.from_bytes(urandom(4), byteorder='big')
+                    module = gen_random(1)[0] * gen_random(1)[0]
                     random = gen_random(len(q))
                     key = random_to_key(random, master_password, module)
                     password_en = encrypt(q, key)
                     file1.write(str(random) + "\n")
-                    file2.write(str(password_en) + " " + str(module) + "\n")
+                    ser.write(("1 " + str(password_en) + " " + str(module) + "\n").encode('utf-8'))
+                    ser.readline()
                     del module
                 file1.close()
-                file2.close()
                 del q
                 del passwords
                 gc.collect()
@@ -182,22 +196,47 @@ try:
             try:
                 passwords = read_passwords()
                 file1 = open("C://PasswordManager/randoms.txt", "w")
-                file2 = open("D://passwords.txt", "w")
+                ser.write(b'7')
+                ser.readline()
                 for q in passwords:
-                    module = int.from_bytes(urandom(4), byteorder='big')
+                    module = gen_random(1)[0] * gen_random(1)[0]
                     random = gen_random(len(q))
                     key = random_to_key(random, master_password, module)
                     password_en = encrypt(q, key)
                     file1.write(str(random) + "\n")
-                    file2.write(str(password_en) + " " + str(module) + "\n")
+                    ser.write(("1 " + str(password_en) + " " + str(module) + "\n").encode('utf-8'))
+                    ser.readline()
                     del module
                 file1.close()
-                file2.close()
                 del q
                 del passwords
                 del master_password
                 gc.collect()
                 break
+            except:
+                print("Error")
+        elif user_choice == "move":
+            try:
+                with open("C://PasswordManager/randoms.txt", "r") as file:
+                    randoms = file.readlines()
+                os.remove("C://PasswordManager/randoms.txt")
+                for line in randoms:
+                    ser.write(("5 " + line).encode('utf-8'))
+                    ser.readline()
+            except:
+                print("Error")
+        elif user_choice == "restore":
+            try:
+                response = b''
+                ser.write(b'6')
+                randoms = []
+                while b'-' not in response:
+                    response = ser.readline()
+                    if b'-' not in response:
+                        randoms.append(response.decode('utf-8').replace("\r\n", ""))
+                with open("C://PasswordManager/randoms.txt", "w") as file:
+                    for random in randoms:
+                        file.write(random)
             except:
                 print("Error")
         else:
