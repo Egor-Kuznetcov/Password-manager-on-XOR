@@ -60,6 +60,9 @@ class LoginScreen(Screen):
         super(LoginScreen, self).__init__(**kwargs)
         ser.write(b'4')
         self.password = ser.readline().decode('utf-8').replace('\r\n', "")
+        if ('a' not in self.password) and ('7' not in self.password) and ('0' not in self.password):
+            sm.add_widget(RegistrationScreen(name='registration'))
+            sm.current = 'registration'
         self.label = Label(text="Please enter password", size_hint=[None, None],
                            size=[200, 75], pos=[200, 575], font_size=35)
         self.text = TextInput(password=True, multiline=False, allow_copy=False,
@@ -77,19 +80,15 @@ class LoginScreen(Screen):
         self.master_password = ""
 
     def check(self, instance):
-        if ('a' not in self.password) and ('7' not in self.password) and ('0' not in self.password):
-            sm.add_widget(RegistrationScreen(name='registration'))
-            sm.current = 'registration'
+        self.master_password = self.text.text
+        sha = sha256()
+        sha.update(self.master_password.encode('utf-8'))
+        if sha.hexdigest() != self.password:
+            self.label.text = "Wrong password!"
+            self.text.text = ""
         else:
-            self.master_password = self.text.text
-            sha = sha256()
-            sha.update(self.master_password.encode('utf-8'))
-            if sha.hexdigest() != self.password:
-                self.label.text = "Wrong password!"
-                self.text.text = ""
-            else:
-                sm.add_widget(MainScreen(name='main'))
-                sm.current = 'main'
+            sm.add_widget(MainScreen(name='main'))
+            sm.current = 'main'
 
 
 class RegistrationScreen(Screen):
