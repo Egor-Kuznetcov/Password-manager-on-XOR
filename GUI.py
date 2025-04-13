@@ -153,8 +153,8 @@ class MainScreen(Screen):
         self.add_widget(flt_layout)
         self.scroll = ScrollView(scroll_type=['bars', 'content'], scroll_distance=35, scroll_y=1, do_scroll_x=False,
                                  do_scroll_y=True, always_overscroll=True,
-                                 bar_width=5, bar_pos_y='right', size_hint=[None, None], size=[600, 720])
-        self.scroll_layout = GridLayout(cols=1, spacing=5, size_hint=[None, None], size=[600, 725])
+                                 bar_width=5, bar_pos_y='right', size_hint=[1, None], size=[600, 725])
+        self.scroll_layout = GridLayout(cols=1, spacing=5, size_hint=[None, None], size=[600, 0])
         self.scroll.add_widget(self.scroll_layout)
         self.layout.add_widget(self.scroll)
         global passwords
@@ -180,11 +180,14 @@ class MainScreen(Screen):
             passwords.append(password_dec)
             del module
             del password_dec
+        ser.write(b'7')
+        ser.readline()
         del strings
         del randoms
         gc.collect()
 
     def add(self, instance):
+        global passwords
         passwords.append(self.pas.text)
         self.scroll_layout.add_widget(self.create_new_block(text=self.pas.text))
 
@@ -201,17 +204,20 @@ class MainScreen(Screen):
                                                            time.sleep(0.007),
                                                            two_channel_obfuscation(label.text))))
         box.add_widget(Button(text='Delete',
-                              on_press=lambda instance: self.delete_widget(layout=box),
-                              on_release=lambda x: self.delete(label_text=label.text),
+                              on_press=lambda instance: self.delete(label_text=label.text),
+                              on_release=lambda x: self.delete_widget(layout=box),
                               size_hint=[None, None], size=[90, 35],
                               background_normal="", background_color=[0.8, 0.04, 0.04, 1]))
+        self.scroll_layout.size = [600, self.scroll_layout.size[1]+40]
         return box
 
     def delete(self, label_text):
+        global passwords
         passwords.remove(label_text)
 
     def delete_widget(self, layout):
         layout.parent.remove_widget(layout)
+        self.scroll_layout.size=[600, self.scroll_layout.size[1]-40]
 
     def move(self, instance):
         global passwords
@@ -259,8 +265,6 @@ class Password_Manager_on_XORApp(App):
     def on_stop(self):
         global passwords
         file1 = open("C://PasswordManager/randoms.txt", "w")
-        ser.write(b'7')
-        ser.readline()
         for q in passwords:
             module = gen_random(1)[0] * gen_random(1)[0]
             random = gen_random(len(q))
