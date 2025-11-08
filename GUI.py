@@ -1,6 +1,16 @@
 import sys
 import time
 import keyboard
+import re
+import gc
+import os
+import psutil
+import win32gui
+from win32api import PostMessage
+from hashlib import sha256
+from TCATO import two_channel_obfuscation
+from xor import *
+
 from kivy.app import App
 from kivy.uix.label import Label
 from kivy.uix.button import Button
@@ -12,12 +22,6 @@ from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.image import Image
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.gridlayout import GridLayout
-from TCATO import two_channel_obfuscation
-import re
-from hashlib import sha256
-from xor import *
-import gc
-import os
 from kivy.config import Config
 
 Config.set('graphics', 'resizable', '0');
@@ -26,6 +30,40 @@ Config.set('graphics', 'height', '800');
 Config.write();
 
 passwords = []
+suspends = 0
+pids = []
+processes = []
+
+
+def master_password_defend_suspend():
+    global suspends, pids, processes
+    if suspends == 0:
+        suspends += 1
+        users = [x.name for x in psutil.users()]
+        for proc in psutil.process_iter(['pid', 'name', 'username']):
+            flag = True
+            for user in users:
+                if user not in proc.username():
+                    flag = False
+            if flag and proc.status() == 'running' and 'python' not in proc.name().lower() and "pycharm" not in proc.name().lower():
+                pids.append(proc.pid)
+                processes.append(proc)
+        for pid in pids:
+            try:
+                psutil.Process(pid).suspend()
+            except Exception as e:
+                print(e)
+    else:
+        return 1
+
+
+def master_password_defend_resume():
+    global pids, processes
+    for pid in pids:
+        try:
+            psutil.Process(pid).resume()
+        except Exception as e:
+            print(e)
 
 
 class RestoreScreen(Screen):
@@ -57,6 +95,7 @@ class RestoreScreen(Screen):
 
 class LoginScreen(Screen):
     def __init__(self, **kwargs):
+        master_password_defend_suspend()
         super(LoginScreen, self).__init__(**kwargs)
         ser.write(b'4')
         self.password = ser.readline().decode('utf-8').replace('\r\n', "")
@@ -88,6 +127,7 @@ class LoginScreen(Screen):
             self.text.text = ""
         else:
             sm.add_widget(MainScreen(name='main'))
+            master_password_defend_resume()
             sm.current = 'main'
 
 
@@ -141,8 +181,8 @@ class MainScreen(Screen):
         anchor = AnchorLayout(anchor_x='left', anchor_y='center')
         anchor.add_widget(self.pas)
         self.save_layout.add_widget(anchor)
-        self.save_layout.add_widget(Button(text="Save", on_press=self.add,
-                                           background_normal="", background_color=[0.27, 0.41, 0.93, 1],
+        self.save_layout.add_widget(Button(text="Save", on_press=self.add, background_normal="",
+                                           background_color=[0.27, 0.41, 0.93, 1],
                                            size_hint=[None, None], size=[100, 75]))
         self.save_layout.add_widget(Button(text='Move', color=[0.09, 0.15, 0.39, 1], on_press=self.move,
                                            background_normal="", background_color=[0.63, 0.99, 1, 1],
@@ -275,13 +315,20 @@ class Password_Manager_on_XORApp(App):
             ser.readline()
             del module
         file1.close()
+        master_password_defend_resume()
         del q
         del loginscreen.master_password
         gc.collect()
         ser.close()
 
     def stop_now(self):
+        master_password_defend_resume()
         sys.exit()
 
 
+window_handle = win32gui.GetForegroundWindow()
+try:
+    PostMessage(window_handle, 0x0050, 0, 0x4090409)
+except Exception as e:
+    print(e)
 Password_Manager_on_XORApp().run()
