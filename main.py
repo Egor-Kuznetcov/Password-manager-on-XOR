@@ -5,6 +5,43 @@ from TCATO import *
 from hashlib import sha256
 import keyboard
 import gc
+import psutil
+
+
+suspends = 0
+pids = []
+processes = []
+
+
+def master_password_defend_suspend():
+    global suspends, pids, processes
+    if suspends == 0:
+        suspends += 1
+        users = [x.name for x in psutil.users()]
+        for proc in psutil.process_iter(['pid', 'name', 'username']):
+            flag = True
+            for user in users:
+                if user not in proc.username():
+                    flag = False
+            if flag and proc.status() == 'running' and 'python' not in proc.name().lower() and "pycharm" not in proc.name().lower():
+                pids.append(proc.pid)
+                processes.append(proc)
+        for pid in pids:
+            try:
+                psutil.Process(pid).suspend()
+            except Exception as e:
+                pass
+    else:
+        return 1
+
+
+def master_password_defend_resume():
+    global pids, processes
+    for pid in pids:
+        try:
+            psutil.Process(pid).resume()
+        except Exception as e:
+            pass
 
 
 def save(password):
@@ -58,6 +95,7 @@ try:
     if ('a' not in user) and ('7' not in user) and ('0' not in user):
         print("Please create a master-password")
         master_password = ""
+        master_password_defend_suspend()
         while True:
             master_password = input(">>")
             if len(master_password) < 8 or re.search('[~!?@#$%^&*_\-+()\[\]{}<>/\\\|"\'.,:;]', master_password) is None\
@@ -65,11 +103,13 @@ try:
                 print("The master password must be at least 8 characters long and contain numbers, "
                       "capital letters and special characters.")
             else:
+                master_password_defend_resume()
                 break
         sha = sha256()
         sha.update(master_password.encode('utf-8'))
         ser.write(('2 ' + str(sha.hexdigest())).encode('utf-8'))
     else:
+        master_password_defend_suspend()
         print("Please enter master-password")
         while True:
             master_password = input(">>")
@@ -78,6 +118,7 @@ try:
             if sha.hexdigest() != user:
                 print("Wrong master-password")
             else:
+                master_password_defend_resume()
                 break
 
     user_choice = ""
@@ -100,8 +141,8 @@ try:
                 save(password)
                 del password
                 gc.collect()
-            except:
-                print("Error")
+            except Exception as e:
+                print(e)
         elif user_choice == "list":
             with open("C://PasswordManager/randoms.txt", "r") as file:
                 randoms = file.readlines()
@@ -150,8 +191,8 @@ try:
                 del passwords
                 gc.collect()
                 print(f"Password {index} deleted")
-            except:
-                print("Error")
+            except Exception as e:
+                print(e)
         elif "edit " in user_choice:
             try:
                 index = int(user_choice.split(" ")[1])
@@ -175,8 +216,8 @@ try:
                 del passwords
                 gc.collect()
                 print(f"Password {index} edited")
-            except:
-                print("Error")
+            except Exception as e:
+                print(e)
         elif "select " in user_choice:
             try:
                 index = int(user_choice.split(" ")[1])
@@ -190,8 +231,8 @@ try:
                 del passwords
                 del selected_pass
                 gc.collect()
-            except:
-                print("Error")
+            except Exception as e:
+                print(e)
         elif user_choice == "exit":
             try:
                 passwords = read_passwords()
@@ -212,9 +253,10 @@ try:
                 del passwords
                 del master_password
                 gc.collect()
+                ser.close()
                 break
-            except:
-                print("Error")
+            except Exception as e:
+                print(e)
         elif user_choice == "move":
             try:
                 with open("C://PasswordManager/randoms.txt", "r") as file:
@@ -223,8 +265,8 @@ try:
                 for line in randoms:
                     ser.write(("5 " + line).encode('utf-8'))
                     ser.readline()
-            except:
-                print("Error")
+            except Exception as e:
+                print(e)
         elif user_choice == "restore":
             try:
                 response = b''
@@ -237,10 +279,10 @@ try:
                 with open("C://PasswordManager/randoms.txt", "w") as file:
                     for random in randoms:
                         file.write(random)
-            except:
-                print("Error")
+            except Exception as e:
+                print(e)
         else:
             print("Unknown command, use help to show the list of command.")
-except:
-    print("Error")
+except Exception as e:
+    print(e)
     time.sleep(2)
