@@ -1,5 +1,7 @@
 import serial.tools.list_ports
 
+alph = "A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, S, T, U, V, W, X, Y, Z, a, b, c, d, e, f, g, h, i, g, k, l, m, n, o, p, q, r, s, t, u, v, w, x, y, z, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, -, _, !, ~, ?, @, #, $, %, ^, &, *, +, (, ), [, ], <, >, \, /, |, \", ', ., ,, :, ;"
+
 ports = list(serial.tools.list_ports.comports())
 com = ""
 flag = False
@@ -33,24 +35,22 @@ def gen_random(length: int):
 
 
 def encrypt(text: str, key: list):
-    with open('alphabet', 'r') as file:
-        alph = file.read().split(", ")
-        res = []
-        for i in range(len(text)):
-            res.append((alph.index(text[i]) + key[i]) % len(alph))
-        del text
-        del key
-        return res
+    global alph
+    res = []
+    for i in range(len(text)):
+        res.append((alph.index(text[i]) + key[i]) % len(alph))
+    del text
+    del key
+    return res
 
 
 def decrypt(text_en: list, key: list):
-    with open('alphabet', 'r') as file:
-        alph = file.read().split(", ")
-        text = ""
-        for i in range(len(text_en)):
-            text += alph[(text_en[i] - key[i]) % len(alph)]
-        del key
-        return text
+    global alph
+    text = ""
+    for i in range(len(text_en)):
+        text += alph[(text_en[i] - key[i]) % len(alph)]
+    del key
+    return text
 
 
 def random_to_key(random: list, master: str, module: int):
